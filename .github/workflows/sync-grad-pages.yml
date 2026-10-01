@@ -96,6 +96,17 @@ jobs:
           grep -q "grad-neutral-selection" _site/config.js
           test -s _site/downloads/GRAD-Android.apk
 
+          visible_files=(
+            "_site/index.html"
+            "_site/install.html"
+            "_site/manifest.webmanifest"
+          )
+          if grep -Eiq 'НГАСУ|Сибстрин|Sibstrin|NGASU|NGASY' "${visible_files[@]}"; then
+            echo "University branding leaked into the public GRAD user interface" >&2
+            grep -Ein 'НГАСУ|Сибстрин|Sibstrin|NGASU|NGASY' "${visible_files[@]}" >&2 || true
+            exit 1
+          fi
+
           if find _site -type f | grep -E '/(admin|server)/' >/dev/null; then
             echo "Unexpected Admin/server content in public backup" >&2
             exit 1
@@ -130,6 +141,8 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 12); do
             if curl --fail-with-body -sS "${PAGE_URL}install.html" -o /tmp/install.html \
+              && curl --fail-with-body -sS "${PAGE_URL}index.html" -o /tmp/index.html \
+              && curl --fail-with-body -sS "${PAGE_URL}manifest.webmanifest" -o /tmp/manifest.webmanifest \
               && curl --fail-with-body -sS "${PAGE_URL}service-worker.js" -o /tmp/sw.js \
               && curl --fail-with-body -sS "${PAGE_URL}access.js" -o /tmp/access.js \
               && curl --fail-with-body -sS "${PAGE_URL}config.js" -o /tmp/config.js \
@@ -143,6 +156,10 @@ jobs:
               grep -q "Град будущего" /tmp/config.js
               grep -q "grad-neutral-selection" /tmp/config.js
               test -s /tmp/apk-head
+              if grep -Eiq 'НГАСУ|Сибстрин|Sibstrin|NGASU|NGASY' /tmp/index.html /tmp/install.html /tmp/manifest.webmanifest; then
+                echo "University branding leaked into live GRAD pages" >&2
+                exit 1
+              fi
               echo "GRAD backup HTTPS verified: ${PAGE_URL}install.html"
               exit 0
             fi
