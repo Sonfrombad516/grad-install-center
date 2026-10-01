@@ -1,0 +1,141 @@
+name: Sync GRAD backup install center
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-grad-pages.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: grad-backup-pages
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    env:
+      SOURCE: https://grad-sibstrin-1376177420.website.yandexcloud.net
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mirror verified GRAD install center
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site
+
+          files=(
+            "INSTALL.html"
+            "access.js"
+            "app.mjs"
+            "assets/brand/helmet-00.b64"
+            "assets/brand/helmet-01.b64"
+            "assets/brand/helmet-02.b64"
+            "assets/brand/launcher-00.b64"
+            "assets/brand/launcher-01.b64"
+            "assets/brand/launcher-02.b64"
+            "assets/brand/launcher-03.b64"
+            "assets/brand/launcher-04.b64"
+            "assets/campus/lab-00.b64"
+            "assets/campus/lab-01.b64"
+            "assets/campus/lab-02.b64"
+            "assets/campus/lab-03.b64"
+            "assets/campus/lab-04.b64"
+            "assets/campus/lab-05.b64"
+            "assets/campus/lab-06.b64"
+            "assets/campus/main-00.b64"
+            "assets/campus/main-01.b64"
+            "assets/campus/main-02.b64"
+            "assets/campus/main-03.b64"
+            "assets/campus/main-04.b64"
+            "assets/campus/main-05.b64"
+            "config.js"
+            "core.mjs"
+            "downloads/GRAD-Android.apk"
+            "icons/grad-launcher-exact.webp"
+            "icons/helmet-orange.svg"
+            "icons/helmet-orange.webp"
+            "icons/icon-192.png"
+            "icons/icon-512.png"
+            "icons/icon.svg"
+            "index.html"
+            "install.css"
+            "install.html"
+            "install.js"
+            "manifest.webmanifest"
+            "parser.mjs"
+            "service-worker.js"
+            "styles.css"
+          )
+
+          for path in "${files[@]}"; do
+            mkdir -p "_site/$(dirname "$path")"
+            curl --fail-with-body --location --retry 3 --retry-delay 2 \
+              "$SOURCE/$path" -o "_site/$path"
+          done
+
+          touch _site/.nojekyll
+
+          grep -q "GRAD" _site/install.html
+          grep -q "grad-shell-v13" _site/service-worker.js
+          grep -q "api/v1/access/status" _site/access.js
+          test -s _site/downloads/GRAD-Android.apk
+
+          if find _site -type f | grep -E '/(admin|server)/' >/dev/null; then
+            echo "Unexpected Admin/server content in public backup" >&2
+            exit 1
+          fi
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: mirror
+    steps:
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify backup HTTPS install center
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if curl --fail-with-body -sS "${PAGE_URL}install.html" -o /tmp/install.html \
+              && curl --fail-with-body -sS "${PAGE_URL}service-worker.js" -o /tmp/sw.js \
+              && curl --fail-with-body -sS "${PAGE_URL}access.js" -o /tmp/access.js \
+              && curl --fail-with-body -sS -r 0-31 "${PAGE_URL}downloads/GRAD-Android.apk" -o /tmp/apk-head; then
+              grep -q "GRAD" /tmp/install.html
+              grep -q "grad-shell-v13" /tmp/sw.js
+              grep -q "api/v1/access/status" /tmp/access.js
+              test -s /tmp/apk-head
+              echo "GRAD backup HTTPS verified: ${PAGE_URL}install.html"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "GRAD backup HTTPS did not become ready in time" >&2
+          exit 1
