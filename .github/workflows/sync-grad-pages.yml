@@ -89,6 +89,10 @@ jobs:
           grep -q "GRAD" _site/install.html
           grep -q "grad-shell-v13" _site/service-worker.js
           grep -q "api/v1/access/status" _site/access.js
+          grep -q "GRAD_APPROVED_ONBOARDING" _site/config.js
+          grep -q "Шаг к знаниям" _site/config.js
+          grep -q "Ступень к цели" _site/config.js
+          grep -q "Град будущего" _site/config.js
           test -s _site/downloads/GRAD-Android.apk
 
           if find _site -type f | grep -E '/(admin|server)/' >/dev/null; then
@@ -127,10 +131,15 @@ jobs:
             if curl --fail-with-body -sS "${PAGE_URL}install.html" -o /tmp/install.html \
               && curl --fail-with-body -sS "${PAGE_URL}service-worker.js" -o /tmp/sw.js \
               && curl --fail-with-body -sS "${PAGE_URL}access.js" -o /tmp/access.js \
+              && curl --fail-with-body -sS "${PAGE_URL}config.js" -o /tmp/config.js \
               && curl --fail-with-body -sS -r 0-31 "${PAGE_URL}downloads/GRAD-Android.apk" -o /tmp/apk-head; then
               grep -q "GRAD" /tmp/install.html
               grep -q "grad-shell-v13" /tmp/sw.js
               grep -q "api/v1/access/status" /tmp/access.js
+              grep -q "GRAD_APPROVED_ONBOARDING" /tmp/config.js
+              grep -q "Шаг к знаниям" /tmp/config.js
+              grep -q "Ступень к цели" /tmp/config.js
+              grep -q "Град будущего" /tmp/config.js
               test -s /tmp/apk-head
               echo "GRAD backup HTTPS verified: ${PAGE_URL}install.html"
               exit 0
