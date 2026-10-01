@@ -93,6 +93,7 @@ jobs:
           grep -q "Шаг к знаниям" _site/config.js
           grep -q "Ступень к цели" _site/config.js
           grep -q "Град будущего" _site/config.js
+          grep -q "grad-neutral-selection" _site/config.js
           test -s _site/downloads/GRAD-Android.apk
 
           if find _site -type f | grep -E '/(admin|server)/' >/dev/null; then
@@ -140,6 +141,7 @@ jobs:
               grep -q "Шаг к знаниям" /tmp/config.js
               grep -q "Ступень к цели" /tmp/config.js
               grep -q "Град будущего" /tmp/config.js
+              grep -q "grad-neutral-selection" /tmp/config.js
               test -s /tmp/apk-head
               echo "GRAD backup HTTPS verified: ${PAGE_URL}install.html"
               exit 0
