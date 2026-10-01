@@ -1,5 +1,5 @@
 name: Sync GRAD backup install center
-# Sync marker: browser access resilience 2026-10-01
+# Sync marker: startup/onboarding refresh 2026-10-01
 
 on:
   workflow_dispatch:
